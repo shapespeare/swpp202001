@@ -9,6 +9,7 @@ set -e
 $1 main.c count.ll -o a.out
 
 for i in {1..6} ; do
-  ./a.out input${i}.txt > tmp.txt
+  echo $i
+	./a.out input${i}.txt > tmp.txt
   diff tmp.txt output${i}.txt
 done
