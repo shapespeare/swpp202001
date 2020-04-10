@@ -5,31 +5,39 @@
 #include<string>
 using namespace llvm;
 
+void counter(BasicBlock &CC, std::set<std::string> succBlock){
+  succBlock.insert(CC.getName().str());
+  if (CC.getTerminator()->getNumSuccessors() == 0)  return;
+  for (unsigned i = 0; i < CC.getTerminator()->getNumSuccessors(); ++i){
+    counter(CC.getTerminator()->getSuccessor(i), succBlock);
+  }  
+}
+
 namespace {
 class MyUnreachablePass : public PassInfoMixin<MyUnreachablePass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
     StringRef funcName = F.getName();
-    outs() << "<<" << funcName << ">>\n";
-    std::set<std::string> block, succBlock;
+    std::set<std::string> block;
+    std::set<std::string> succBlock;
+    std::set<std::string>::iterator iter;
 
     for (auto I = F.begin(); I != F.end(); ++I) {
       BasicBlock &BB = *I;
-      outs() << "BasicBlock: " << BB.getName() << "\n";
-      block.insert(BB.getName());
+      block.insert(BB.getName().str());
+
+      counter(BB, succBlock);
 
       unsigned successorCnt = BB.getTerminator()->getNumSuccessors();
-      outs() << "\tSuccessors: total " << successorCnt << " (";
-      for (unsigned i = 0; i < successorCnt; ++i){
-        outs() << (i == 0 ? "" : " ")
-               << BB.getTerminator()->getSuccessor(i)->getName();
-        succBlock.insert(BB.getTerminator()->getSuccessor(i)->getName());
-      }
-        
-      outs() << ")\n";
+      for (unsigned i = 0; i < successorCnt; ++i)
+        succBlock.insert(BB.getTerminator()->getSuccessor(i)->getName().str());
     }
 
-
+    block.erase(block.find("entry"));
+    for (iter = succBlock.begin(); iter != succBlock.end(); iter++)
+      block.erase(block.find(*iter));
+    for (iter = block.begin(); iter != block.end(); iter++)
+      outs() << *iter << "\n";
 
     return PreservedAnalyses::all();
   }
