@@ -5,11 +5,12 @@
 #include<string>
 using namespace llvm;
 
-void counter(BasicBlock &CC, std::set<std::string> succBlock){
+void counter(BasicBlock &CC, std::set<std::string> &succBlock){
   succBlock.insert(CC.getName().str());
   if (CC.getTerminator()->getNumSuccessors() == 0)  return;
   for (unsigned i = 0; i < CC.getTerminator()->getNumSuccessors(); ++i){
-    counter(CC.getTerminator()->getSuccessor(i), succBlock);
+    if (succBlock.find(CC.getTerminator()->getSuccessor(i)->getName().str()) != succBlock.end()) return;
+    counter(*(CC.getTerminator()->getSuccessor(i)), succBlock);
   }  
 }
 
@@ -20,24 +21,22 @@ public:
     StringRef funcName = F.getName();
     std::set<std::string> block;
     std::set<std::string> succBlock;
-    std::set<std::string>::iterator iter;
+    std::set<std::string>::iterator itB;
 
     for (auto I = F.begin(); I != F.end(); ++I) {
       BasicBlock &BB = *I;
       block.insert(BB.getName().str());
-
-      counter(BB, succBlock);
-
-      unsigned successorCnt = BB.getTerminator()->getNumSuccessors();
-      for (unsigned i = 0; i < successorCnt; ++i)
-        succBlock.insert(BB.getTerminator()->getSuccessor(i)->getName().str());
     }
 
-    block.erase(block.find("entry"));
-    for (iter = succBlock.begin(); iter != succBlock.end(); iter++)
-      block.erase(block.find(*iter));
-    for (iter = block.begin(); iter != block.end(); iter++)
-      outs() << *iter << "\n";
+    auto K = F.begin();
+    BasicBlock &CC = *K;
+    counter(CC, succBlock);
+
+    for (itB = succBlock.begin(); itB != succBlock.end(); itB++){
+      if (block.find(*itB) != block.end())  block.erase(block.find(*itB));
+    }
+    for (itB = block.begin(); itB != block.end(); itB++)
+      outs() << *itB << "\n";
 
     return PreservedAnalyses::all();
   }
